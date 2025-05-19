@@ -2,10 +2,18 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cookieParser = require('cookie-parser');
 const authRoutes = require('./src/routes/authRoutes');
+const cors = require('cors');
+
 require('dotenv').config();
 
 const app = express();
 
+app.use(
+  cors({
+    origin: '*',
+    credentials: true, // nếu frontend cần gửi cookie hoặc header Authorization
+  })
+);
 app.use(express.json());
 app.use(cookieParser());
 
