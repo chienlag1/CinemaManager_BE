@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cookieParser = require('cookie-parser');
 const authRoutes = require('./src/routes/authRoutes');
+const webhookRouter = require('./src/routes/webhook');
 const cors = require('cors');
 
 require('dotenv').config();
@@ -16,7 +17,7 @@ app.use(
 );
 app.use(express.json());
 app.use(cookieParser());
-
+app.use('/webhook', webhookRouter);
 app.use('/api/auth', authRoutes);
 
 app.use((req, res) => {

@@ -1,7 +1,8 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/user');
+const { Clerk } = require('@clerk/clerk-sdk-node'); // Bỏ comment dòng này
 
-exports.protect = async (req, res, next) => {
+const protect = async (req, res, next) => {
   let token;
 
   if (
@@ -20,8 +21,28 @@ exports.protect = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const currentUser = await User.findById(decoded.id);
+    // Giải mã token Clerk (không cần secret nếu chỉ decode)
+    const decoded = jwt.decode(token);
+
+    // Lấy userId từ token Clerk
+    const clerkUserId = decoded.sub; // hoặc decoded.id tùy cấu trúc token Clerk
+
+    // Lấy thông tin user từ Clerk
+    const clerkUser = await Clerk.users.getUser(clerkUserId);
+
+    // Tìm user trong MongoDB
+    let currentUser = await User.findOne({ clerkUserId });
+
+    // Nếu chưa có thì tạo mới
+    if (!currentUser && clerkUser) {
+      currentUser = await User.create({
+        clerkUserId,
+        name: clerkUser.firstName || '',
+        email: clerkUser.emailAddresses[0]?.emailAddress,
+        role: clerkUser.publicMetadata?.role || 'user',
+        emailVerified: clerkUser.emailAddresses[0]?.verified,
+      });
+    }
 
     if (!currentUser) {
       return res
@@ -36,4 +57,21 @@ exports.protect = async (req, res, next) => {
       .status(401)
       .json({ success: false, message: 'Token không hợp lệ hoặc đã hết hạn' });
   }
+};
+
+const restrictTo = (...roles) => {
+  return (req, res, next) => {
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Bạn không có quyền truy cập chức năng này',
+      });
+    }
+    next();
+  };
+};
+
+module.exports = {
+  protect,
+  restrictTo,
 };
