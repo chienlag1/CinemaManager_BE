@@ -1,77 +1,75 @@
-const jwt = require('jsonwebtoken');
+const { clerkClient } = require('@clerk/clerk-sdk-node');
 const User = require('../models/user');
-const { Clerk } = require('@clerk/clerk-sdk-node'); // Bỏ comment dòng này
+
+async function syncClerkUserToMongo(clerkUserId) {
+  const clerkUser = await clerkClient.users.getUser(clerkUserId);
+  if (!clerkUser) return null;
+
+  let user = await User.findOne({ clerkUserId });
+
+  const userData = {
+    clerkUserId,
+    name: `${clerkUser.firstName ?? ''} ${clerkUser.lastName ?? ''}`.trim(),
+    email: clerkUser.emailAddresses[0]?.emailAddress,
+    role: clerkUser.publicMetadata?.role || 'user',
+    emailVerified:
+      clerkUser.emailAddresses[0]?.verification?.status === 'verified',
+  };
+
+  if (!user) {
+    user = await User.create(userData);
+    console.log('User created in MongoDB:', user);
+  } else {
+    Object.assign(user, userData);
+    await user.save();
+    console.log('User updated in MongoDB:', user);
+  }
+
+  return user;
+}
 
 const protect = async (req, res, next) => {
-  let token;
-
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith('Bearer')
-  ) {
-    token = req.headers.authorization.split(' ')[1];
-  } else if (req.cookies.token) {
-    token = req.cookies.token;
-  }
-
-  if (!token) {
-    return res
-      .status(401)
-      .json({ success: false, message: 'Bạn chưa đăng nhập' });
-  }
-
   try {
-    // Giải mã token Clerk (không cần secret nếu chỉ decode)
-    const decoded = jwt.decode(token);
-
-    // Lấy userId từ token Clerk
-    const clerkUserId = decoded.sub; // hoặc decoded.id tùy cấu trúc token Clerk
-
-    // Lấy thông tin user từ Clerk
-    const clerkUser = await Clerk.users.getUser(clerkUserId);
-
-    // Tìm user trong MongoDB
-    let currentUser = await User.findOne({ clerkUserId });
-
-    // Nếu chưa có thì tạo mới
-    if (!currentUser && clerkUser) {
-      currentUser = await User.create({
-        clerkUserId,
-        name: clerkUser.firstName || '',
-        email: clerkUser.emailAddresses[0]?.emailAddress,
-        role: clerkUser.publicMetadata?.role || 'user',
-        emailVerified: clerkUser.emailAddresses[0]?.verified,
-      });
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      console.log('No token provided');
+      return res.status(401).json({ message: 'No token provided' });
     }
 
-    if (!currentUser) {
-      return res
-        .status(401)
-        .json({ success: false, message: 'Người dùng không tồn tại' });
+    const token = authHeader.split(' ')[1];
+    console.log('Received token:', token);
+
+    const { userId } = await clerkClient.verifyToken(token);
+    console.log('Verified Clerk userId:', userId);
+
+    if (!userId) {
+      console.log('Invalid token');
+      return res.status(401).json({ message: 'Invalid token' });
     }
 
-    req.user = currentUser;
+    const user = await syncClerkUserToMongo(userId);
+    console.log('Synced user:', user);
+
+    if (!user) {
+      console.log('User not found after sync');
+      return res.status(401).json({ message: 'User not found' });
+    }
+
+    req.user = user;
     next();
   } catch (err) {
-    res
-      .status(401)
-      .json({ success: false, message: 'Token không hợp lệ hoặc đã hết hạn' });
+    console.error('Error in protect middleware:', err);
+    res.status(401).json({ message: 'Unauthorized' });
   }
 };
 
 const restrictTo = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Bạn không có quyền truy cập chức năng này',
-      });
+      return res.status(403).json({ message: 'Access denied' });
     }
     next();
   };
 };
 
-module.exports = {
-  protect,
-  restrictTo,
-};
+module.exports = { protect, restrictTo };
