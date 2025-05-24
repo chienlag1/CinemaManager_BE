@@ -7,22 +7,22 @@ async function syncClerkUserToMongo(clerkUserId) {
 
   let user = await User.findOne({ clerkUserId });
 
+  // Lấy role từ publicMetadata Clerk, nếu không có thì giữ nguyên role cũ hoặc mặc định là 'user'
+  const roleFromClerk = clerkUser.publicMetadata?.role;
   const userData = {
     clerkUserId,
     name: `${clerkUser.firstName ?? ''} ${clerkUser.lastName ?? ''}`.trim(),
     email: clerkUser.emailAddresses[0]?.emailAddress,
-    role: clerkUser.publicMetadata?.role || 'user',
+    role: roleFromClerk || (user ? user.role : 'user'),
     emailVerified:
       clerkUser.emailAddresses[0]?.verification?.status === 'verified',
   };
 
   if (!user) {
     user = await User.create(userData);
-    console.log('User created in MongoDB:', user);
   } else {
     Object.assign(user, userData);
     await user.save();
-    console.log('User updated in MongoDB:', user);
   }
 
   return user;
