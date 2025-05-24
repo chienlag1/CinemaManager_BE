@@ -1,42 +1,22 @@
 const express = require('express');
-const { protect, restrictTo, getMe } = require('../controllers/authController');
 const router = express.Router();
+const { protect, restrictTo } = require('../middlewares/authMiddleware');
+const { getMe, logout } = require('../controllers/authController');
 
-// Route GET để lấy thông tin user (đã có)
+// Public routes (nếu có)
+
+// Protected routes
 router.get('/me', protect, getMe);
+router.post('/logout', protect, logout);
 
-// ✅ Route POST để đồng bộ user từ FE gửi lên (dành cho SyncClerkUser.tsx)
-router.post('/me', async (req, res) => {
-  try {
-    const { clerkUserId, name, email, emailVerified } = req.body;
-    if (!clerkUserId || !email) {
-      return res.status(400).json({ message: 'Thiếu thông tin user' });
-    }
+// Admin-only routes
+router.get('/admin', protect, restrictTo('admin'), (req, res) => {
+  res.json({ message: 'Khu vực quản trị' });
+});
 
-    const User = require('../models/user');
-
-    let user = await User.findOne({ clerkUserId });
-
-    if (!user) {
-      user = await User.create({
-        clerkUserId,
-        name,
-        email,
-        emailVerified,
-        role: 'user',
-      });
-    } else {
-      user.name = name;
-      user.email = email;
-      user.emailVerified = emailVerified;
-      await user.save();
-    }
-
-    res.status(200).json({ success: true, user });
-  } catch (error) {
-    console.error('POST /me error:', error);
-    res.status(500).json({ message: 'Lỗi máy chủ' });
-  }
+// User routes
+router.get('/dashboard', protect, restrictTo('user', 'admin'), (req, res) => {
+  res.json({ message: `Xin chào ${req.user.name}` });
 });
 
 module.exports = router;
