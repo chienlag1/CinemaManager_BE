@@ -1,42 +1,27 @@
 const express = require('express');
-const { protect, restrictTo, getMe } = require('../controllers/authController');
+const authController = require('../controllers/authController');
+const { protect, restrictTo } = require('../middlewares/authMiddleware');
+
 const router = express.Router();
 
-// Route GET để lấy thông tin user (đã có)
-router.get('/me', protect, getMe);
+router.post('/register', authController.register);
+router.post('/login', authController.loginUser);
+router.get('/verify-email/:token', authController.verifyEmail);
+router.post('/forgot-password', authController.forgotPassword);
+router.patch('/reset-password/:token', authController.resetPassword);
 
-// ✅ Route POST để đồng bộ user từ FE gửi lên (dành cho SyncClerkUser.tsx)
-router.post('/me', async (req, res) => {
-  try {
-    const { clerkUserId, name, email, emailVerified } = req.body;
-    if (!clerkUserId || !email) {
-      return res.status(400).json({ message: 'Thiếu thông tin user' });
-    }
+// Dùng xác thực nội bộ với JWT
+router.get('/profile', authController.protect, authController.getMe);
+router.get('/logout', authController.logoutUser);
+router.patch(
+  '/update-password',
+  authController.protect,
+  authController.updatePassword
+);
 
-    const User = require('../models/user');
-
-    let user = await User.findOne({ clerkUserId });
-
-    if (!user) {
-      user = await User.create({
-        clerkUserId,
-        name,
-        email,
-        emailVerified,
-        role: 'user',
-      });
-    } else {
-      user.name = name;
-      user.email = email;
-      user.emailVerified = emailVerified;
-      await user.save();
-    }
-
-    res.status(200).json({ success: true, user });
-  } catch (error) {
-    console.error('POST /me error:', error);
-    res.status(500).json({ message: 'Lỗi máy chủ' });
-  }
+// Dùng xác thực Clerk + phân quyền admin
+router.get('/admin/dashboard', protect, restrictTo('admin'), (req, res) => {
+  res.json({ message: 'Welcome admin!' });
 });
 
 module.exports = router;
