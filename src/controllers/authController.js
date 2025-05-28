@@ -20,16 +20,20 @@ async function syncClerkUserToMongo(clerkUserId) {
 
     if (!user) {
       user = await User.create(userData);
-      console.log('✅ User created in MongoDB:', user.email);
+      console.log('✅ User created in MongoDB:', user.email); // Giữ lại log này vì nó là thông báo thành công quan trọng
     } else {
       Object.assign(user, userData);
       await user.save();
-      console.log('✅ User updated in MongoDB:', user.email);
+      console.log('✅ User updated in MongoDB:', user.email); // Giữ lại log này vì nó là thông báo thành công quan trọng
     }
 
     return user;
   } catch (error) {
-    console.error('❌ Error in syncClerkUserToMongo:', error);
+    console.error(
+      '❌ Error in syncClerkUserToMongo:',
+      error.message,
+      error.stack
+    );
     throw error;
   }
 }
@@ -38,36 +42,67 @@ async function syncClerkUserToMongo(clerkUserId) {
 const protect = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
+
     if (!authHeader?.startsWith('Bearer ')) {
-      return res.status(401).json({ message: 'No token provided' });
+      return res
+        .status(401)
+        .json({ message: 'No token provided or invalid format' });
     }
 
     const token = authHeader.split(' ')[1];
 
-    // Xác thực token với Clerk
-    const { userId } = await clerkClient.verifyToken(token);
+    let userId;
+    try {
+      const verifiedToken = await clerkClient.verifyToken(token);
+      // Lấy userId từ claim 'sub' (subject) của JWT
+      userId = verifiedToken.sub;
+    } catch (verifyError) {
+      console.error('❌ Clerk Token Verification Failed:', verifyError.message);
+      return res.status(401).json({
+        message: 'Invalid or expired token',
+        details: verifyError.message,
+      });
+    }
+
     if (!userId) {
-      return res.status(401).json({ message: 'Invalid token' });
+      // Log này được giữ lại vì nó chỉ ra một trường hợp bất thường
+      console.error(
+        'userId is null/undefined after verification but no error was thrown.'
+      );
+      return res
+        .status(401)
+        .json({ message: 'Invalid token (userId missing)' });
     }
 
     const user = await syncClerkUserToMongo(userId);
+
     if (!user) {
-      return res.status(401).json({ message: 'User not found' });
+      return res
+        .status(401)
+        .json({ message: 'User not found in database after sync' });
     }
 
     req.user = user;
     next();
   } catch (err) {
-    console.error('❌ Auth error:', err);
-    res.status(401).json({ message: 'Unauthorized' });
+    console.error('❌ General Auth Error:', err.message, err.stack);
+    res.status(401).json({
+      message: 'Unauthorized',
+      details:
+        err.message || 'An unknown error occurred during authentication.',
+    });
   }
 };
 
 // Middleware phân quyền
 const restrictTo = (...roles) => {
   return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ message: 'Access denied' });
+    if (!req.user || !roles.includes(req.user.role)) {
+      return res
+        .status(403)
+        .json({
+          message: 'Access denied: You do not have the necessary permissions.',
+        });
     }
     next();
   };
@@ -76,38 +111,42 @@ const restrictTo = (...roles) => {
 // GET /api/me - Lấy thông tin user hiện tại
 const getMe = async (req, res) => {
   try {
+    if (!req.user) {
+      return res
+        .status(404)
+        .json({
+          success: false,
+          message: 'User data not found in request context.',
+        });
+    }
     res.status(200).json({
       success: true,
       user: req.user,
     });
   } catch (error) {
-    console.error('❌ GetMe error:', error);
-    res.status(500).json({ message: 'Lỗi máy chủ' });
+    console.error('❌ GetMe Handler Error:', error.message, error.stack);
+    res.status(500).json({
+      message: 'Server error retrieving user data',
+      details: error.message,
+    });
   }
 };
 
 // POST /api/me - Tạo/đồng bộ user từ FE (KHÔNG CẦN TOKEN)
 const syncUserFromFrontend = async (req, res) => {
   try {
-    console.log('📝 Sync request body:', req.body);
-
     const { clerkUserId, name, email, emailVerified, role } = req.body;
 
-    // Validate dữ liệu đầu vào
     if (!clerkUserId || !email) {
-      console.log('❌ Missing required fields:', { clerkUserId, email });
       return res.status(400).json({
         message: 'Thiếu thông tin user',
         required: ['clerkUserId', 'email'],
       });
     }
 
-    // Tìm user trong database
     let user = await User.findOne({ clerkUserId });
-    console.log('🔍 Existing user:', user ? 'Found' : 'Not found');
 
     if (!user) {
-      // Tạo user mới
       user = await User.create({
         clerkUserId,
         name: name || '',
@@ -115,9 +154,8 @@ const syncUserFromFrontend = async (req, res) => {
         emailVerified: emailVerified || false,
         role: role || 'user',
       });
-      console.log('✅ User created:', user.email);
+      console.log('✅ User created:', user.email); // Giữ lại log này
     } else {
-      // Cập nhật user hiện có
       user.name = name || user.name;
       user.email = email;
       user.emailVerified =
@@ -125,7 +163,7 @@ const syncUserFromFrontend = async (req, res) => {
       if (role) user.role = role;
 
       await user.save();
-      console.log('✅ User updated:', user.email);
+      console.log('✅ User updated:', user.email); // Giữ lại log này
     }
 
     res.status(200).json({
@@ -136,9 +174,8 @@ const syncUserFromFrontend = async (req, res) => {
         : 'User updated successfully',
     });
   } catch (error) {
-    console.error('❌ Sync error:', error);
+    console.error('❌ Sync error:', error.message, error.stack);
 
-    // Chi tiết lỗi để debug
     if (error.name === 'ValidationError') {
       return res.status(400).json({
         message: 'Dữ liệu không hợp lệ',
