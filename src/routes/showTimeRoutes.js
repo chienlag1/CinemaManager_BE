@@ -5,7 +5,7 @@ const {
   getShowtimeById,
   updateShowtime,
   deleteShowtime,
-} = require('../controllers/showtimeController');
+} = require('../controllers/showTimeController');
 const { protect, restrictTo } = require('../controllers/authController');
 const router = express.Router();
 

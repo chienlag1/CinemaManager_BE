@@ -16,9 +16,9 @@ app.use(express.json());
 
 app.use('/api/auth', authRouter);
 app.use('/api/movies', movieRouter);
-app.use('/api/rooms', roomRoutes); // Sử dụng roomRoutes
-app.use('/api/showtimes', showtimeRoutes); // Sử dụng showtimeRoutes
-app.use('/api/tickets', ticketRoutes); // Sử dụng ticketRoutes
+app.use('/api/rooms', roomRoutes);
+app.use('/api/showtimes', showtimeRoutes);
+app.use('/api/tickets', ticketRoutes);
 
 mongoose
   .connect(process.env.MONGO_URI)

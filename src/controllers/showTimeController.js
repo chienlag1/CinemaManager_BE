@@ -17,9 +17,6 @@ const createShowtime = async (req, res) => {
       return res.status(404).json({ message: 'Room not found.' });
     }
 
-    // Kiểm tra xung đột thời gian (tùy chọn, cần logic phức tạp hơn)
-    // Đảm bảo không có suất chiếu nào khác trong cùng phòng chiếu tại thời điểm đó
-
     const showtime = await Showtime.create({
       movie,
       room,
