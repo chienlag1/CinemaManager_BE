@@ -40,9 +40,10 @@ async function syncClerkUserToMongo(clerkUserId) {
 
 // Middleware xác thực Clerk
 const protect = async (req, res, next) => {
-  // ✅ Bỏ qua preflight request để tránh lỗi từ Clerk
+  // ✅ Trả về sớm luôn với preflight request
   if (req.method === 'OPTIONS') {
-    return next(); // QUAN TRỌNG
+    res.status(200).end(); // QUAN TRỌNG
+    return;
   }
 
   try {

@@ -32,7 +32,20 @@ app.use(
 );
 
 // ✅ Phải có để xử lý preflight từ tất cả route
-app.options('*', cors());
+app.options(
+  '*',
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  })
+);
 
 // ✅ Middleware parse JSON
 app.use(express.json());
