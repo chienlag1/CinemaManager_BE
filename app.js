@@ -9,29 +9,45 @@ const roomRoutes = require('./src/routes/roomRoutes');
 const showtimeRoutes = require('./src/routes/showTimeRoutes');
 const ticketRoutes = require('./src/routes/ticketRoutes');
 
-// 1. Khởi tạo app
 const app = express();
 
-// 2. CORS config (chỉ giữ cái này thôi, đừng gọi lại `app.use(cors())` nữa)
-app.use(cors({ origin: '*', credentials: true }));
+// ✅ CORS an toàn + hỗ trợ credentials
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://cinema-manager-fe.vercel.app',
+];
 
-// 3. Middleware
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
+  })
+);
+
+// ✅ Xử lý preflight request (OPTIONS)
+app.options('*', cors());
+
+// Middleware
 app.use(express.json());
 
-// 4. Routes
+// Routes
 app.use('/api/auth', authRouter);
 app.use('/api/movies', movieRouter);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/showtimes', showtimeRoutes);
 app.use('/api/tickets', ticketRoutes);
 
-// 5. MongoDB connect
+// DB Connect
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log('MongoDB connected');
-  })
+  .then(() => console.log('MongoDB connected'))
   .catch((err) => console.error(err));
 
-// 6. Export app cho serverless / vercel
+// Export app cho Vercel
 module.exports = app;
