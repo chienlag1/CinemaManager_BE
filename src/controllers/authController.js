@@ -40,8 +40,9 @@ async function syncClerkUserToMongo(clerkUserId) {
 
 // Middleware xác thực Clerk
 const protect = async (req, res, next) => {
+  // ✅ Bỏ qua preflight request để tránh lỗi từ Clerk
   if (req.method === 'OPTIONS') {
-    return next(); // ⬅️ Cho phép OPTIONS qua mà không cần xác thực
+    return next(); // QUAN TRỌNG
   }
 
   try {
@@ -53,37 +54,25 @@ const protect = async (req, res, next) => {
     }
 
     const token = authHeader.split(' ')[1];
-    let userId;
-
-    try {
-      const verifiedToken = await clerkClient.verifyToken(token);
-      userId = verifiedToken.sub;
-    } catch (verifyError) {
-      return res.status(401).json({
-        message: 'Invalid or expired token',
-        details: verifyError.message,
-      });
-    }
+    const verifiedToken = await clerkClient.verifyToken(token);
+    const userId = verifiedToken.sub;
 
     if (!userId) {
-      return res
-        .status(401)
-        .json({ message: 'Invalid token (userId missing)' });
+      return res.status(401).json({ message: 'Invalid token (no userId)' });
     }
 
     const user = await syncClerkUserToMongo(userId);
     if (!user) {
-      return res
-        .status(401)
-        .json({ message: 'User not found in database after sync' });
+      return res.status(401).json({ message: 'User not found' });
     }
 
     req.user = user;
     next();
   } catch (err) {
+    console.error('❌ General Auth Error:', err.message);
     res.status(401).json({
       message: 'Unauthorized',
-      details: err.message || 'Unknown error during auth',
+      details: err.message || 'Unknown error during authentication',
     });
   }
 };
