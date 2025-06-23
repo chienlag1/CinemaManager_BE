@@ -2,8 +2,6 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 
-const cors = require('cors');
-
 const movieRouter = require('./src/routes/movieRoutes');
 const authRouter = require('./src/routes/authRoutes');
 const roomRoutes = require('./src/routes/roomRoutes');
@@ -12,29 +10,37 @@ const ticketRoutes = require('./src/routes/ticketRoutes');
 
 const app = express();
 
-// Danh sách domain được phép gọi API
+// Danh sách origin được phép truy cập
 const allowedOrigins = [
   'http://localhost:5173',
   'https://cinema-manager-fe.vercel.app',
 ];
 
+// Middleware xử lý CORS & preflight OPTIONS
 app.use((req, res, next) => {
   const origin = req.headers.origin;
+
   if (!origin || allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin || '*');
     res.header('Access-Control-Allow-Credentials', 'true');
     res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+    res.header(
+      'Access-Control-Allow-Headers',
+      req.headers['access-control-request-headers'] ||
+        'Content-Type,Authorization'
+    );
+
     if (req.method === 'OPTIONS') {
       return res.sendStatus(200);
     }
+
     next();
   } else {
     res.status(403).send('Not allowed by CORS');
   }
 });
 
-// Middleware
+// Middleware parse JSON body
 app.use(express.json());
 
 // Routes
@@ -50,5 +56,4 @@ mongoose
   .then(() => console.log('MongoDB connected'))
   .catch((err) => console.error(err));
 
-// Export app cho serverless
 module.exports = app;
