@@ -83,7 +83,6 @@ const movieSchema = new mongoose.Schema(
 );
 
 // Indexes để tăng tốc độ tìm kiếm
-movieSchema.index({ title: 1 }); // Index cho trường title để tìm kiếm nhanh
 movieSchema.index({ genre: 1 }); // Index cho trường genre
 movieSchema.index({ isShowing: 1, releaseDate: -1 }); // Index để tìm phim đang chiếu/sắp chiếu
 
