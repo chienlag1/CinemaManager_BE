@@ -1,4 +1,2 @@
-const serverless = require('serverless-http');
-const app = require('../app');
-
-module.exports = serverless(app); // ✅ Export đúng format Vercel yêu cầu
+const app = require('../app'); // hoặc './src/app' nếu bạn tách
+module.exports = app;
