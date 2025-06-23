@@ -40,9 +40,12 @@ async function syncClerkUserToMongo(clerkUserId) {
 
 // Middleware xác thực Clerk
 const protect = async (req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    return next(); // ⬅️ Cho phép OPTIONS qua mà không cần xác thực
+  }
+
   try {
     const authHeader = req.headers.authorization;
-
     if (!authHeader?.startsWith('Bearer ')) {
       return res
         .status(401)
@@ -50,14 +53,12 @@ const protect = async (req, res, next) => {
     }
 
     const token = authHeader.split(' ')[1];
-
     let userId;
+
     try {
       const verifiedToken = await clerkClient.verifyToken(token);
-      // Lấy userId từ claim 'sub' (subject) của JWT
       userId = verifiedToken.sub;
     } catch (verifyError) {
-      console.error('❌ Clerk Token Verification Failed:', verifyError.message);
       return res.status(401).json({
         message: 'Invalid or expired token',
         details: verifyError.message,
@@ -65,17 +66,12 @@ const protect = async (req, res, next) => {
     }
 
     if (!userId) {
-      // Log này được giữ lại vì nó chỉ ra một trường hợp bất thường
-      console.error(
-        'userId is null/undefined after verification but no error was thrown.'
-      );
       return res
         .status(401)
         .json({ message: 'Invalid token (userId missing)' });
     }
 
     const user = await syncClerkUserToMongo(userId);
-
     if (!user) {
       return res
         .status(401)
@@ -85,11 +81,9 @@ const protect = async (req, res, next) => {
     req.user = user;
     next();
   } catch (err) {
-    console.error('❌ General Auth Error:', err.message, err.stack);
     res.status(401).json({
       message: 'Unauthorized',
-      details:
-        err.message || 'An unknown error occurred during authentication.',
+      details: err.message || 'Unknown error during auth',
     });
   }
 };
@@ -98,11 +92,9 @@ const protect = async (req, res, next) => {
 const restrictTo = (...roles) => {
   return (req, res, next) => {
     if (!req.user || !roles.includes(req.user.role)) {
-      return res
-        .status(403)
-        .json({
-          message: 'Access denied: You do not have the necessary permissions.',
-        });
+      return res.status(403).json({
+        message: 'Access denied: You do not have the necessary permissions.',
+      });
     }
     next();
   };
@@ -112,12 +104,10 @@ const restrictTo = (...roles) => {
 const getMe = async (req, res) => {
   try {
     if (!req.user) {
-      return res
-        .status(404)
-        .json({
-          success: false,
-          message: 'User data not found in request context.',
-        });
+      return res.status(404).json({
+        success: false,
+        message: 'User data not found in request context.',
+      });
     }
     res.status(200).json({
       success: true,

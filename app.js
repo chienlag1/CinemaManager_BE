@@ -20,8 +20,8 @@ const allowedOrigins = [
 app.use((req, res, next) => {
   const origin = req.headers.origin;
 
-  if (!origin || allowedOrigins.includes(origin)) {
-    res.header('Access-Control-Allow-Origin', origin || '*');
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
     res.header('Access-Control-Allow-Credentials', 'true');
     res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
     res.header(
@@ -29,15 +29,13 @@ app.use((req, res, next) => {
       req.headers['access-control-request-headers'] ||
         'Content-Type,Authorization'
     );
-
-    if (req.method === 'OPTIONS') {
-      return res.sendStatus(200);
-    }
-
-    next();
-  } else {
-    res.status(403).send('Not allowed by CORS');
   }
+
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+
+  next();
 });
 
 // Middleware parse JSON body
