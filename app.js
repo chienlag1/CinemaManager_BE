@@ -8,7 +8,12 @@ const roomRoutes = require('./src/routes/roomRoutes'); // Thêm roomRoutes
 const showtimeRoutes = require('./src/routes/showTimeRoutes'); // Thêm showtimeRoutes
 const ticketRoutes = require('./src/routes/ticketRoutes'); // Thêm ticketRoutes
 
-const cors = require('cors');
+const corsOptions = {
+  origin: 'https://cinema-manager-fe.vercel.app', // chỉ cho phép domain FE
+  credentials: true, // nếu bạn sử dụng cookie / token auth
+};
+
+app.use(cors(corsOptions));
 
 const app = express();
 app.use(cors());
