@@ -9,7 +9,7 @@ const authRouter = require('./src/routes/authRoutes');
 const roomRoutes = require('./src/routes/roomRoutes');
 const showtimeRoutes = require('./src/routes/showTimeRoutes');
 const ticketRoutes = require('./src/routes/ticketRoutes');
-
+const paymentRoutes = require('./src/routes/paymentRoutes');
 const app = express();
 
 // ✅ Connect MongoDB trước (quan trọng với Serverless)
@@ -44,6 +44,6 @@ app.use('/api/movies', movieRouter);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/showtimes', showtimeRoutes);
 app.use('/api/tickets', ticketRoutes);
+app.use('/api/payment', paymentRoutes);
 
-// ✅ Export app (chỉ vậy thôi)
 module.exports = app;

@@ -5,9 +5,6 @@ const createRoom = async (req, res) => {
   try {
     const { name, capacity, type } = req.body;
 
-    // Tạo danh sách ghế mặc định dựa trên capacity
-    // Ví dụ: 10 hàng, mỗi hàng 10 ghế (tổng 100 ghế)
-    // Đây là ví dụ đơn giản, trong thực tế cần logic phức tạp hơn cho bố cục ghế
     const seats = [];
     const numRows = Math.ceil(capacity / 10); // Chia thành các hàng, mỗi hàng tối đa 10 ghế
     for (let i = 0; i < numRows; i++) {

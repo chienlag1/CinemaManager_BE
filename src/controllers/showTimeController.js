@@ -38,7 +38,6 @@ const createShowtime = async (req, res) => {
 // Lấy tất cả suất chiếu (Admin/User)
 const getAllShowtimes = async (req, res) => {
   try {
-    // Có thể thêm query params để lọc theo phim, phòng, ngày
     let query = {};
     if (req.query.movie) query.movie = req.query.movie;
     if (req.query.room) query.room = req.query.room;

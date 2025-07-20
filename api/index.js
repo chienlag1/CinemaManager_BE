@@ -1,2 +1,2 @@
-const app = require('../app'); // hoặc './src/app' nếu bạn tách
+const app = require('../app');
 module.exports = app;
