@@ -12,11 +12,13 @@ const ticketSchema = new mongoose.Schema(
       ref: 'Showtime', // Liên kết với Showtime Model
       required: [true, 'A ticket must belong to a showtime.'],
     },
+
     seats: {
       type: [
         {
           row: String,
           number: Number,
+          _id: false, // ⛔ Tắt tự động sinh _id cho mỗi seat
         },
       ],
       required: [true, 'A ticket must have at least one seat.'],
@@ -27,23 +29,28 @@ const ticketSchema = new mongoose.Schema(
         message: 'Seats array cannot be empty.',
       },
     },
+
     totalPrice: {
       type: Number,
       required: [true, 'A ticket must have a total price.'],
       min: [0, 'Total price cannot be negative.'],
     },
+
     status: {
       type: String,
-      enum: ['pending', 'paid', 'cancelled', 'used', 'refunded'],
+      enum: ['pending', 'unpaid', 'paid', 'cancelled', 'used', 'refunded'],
       default: 'pending',
     },
+
     paymentMethod: {
       type: String,
       // Có thể thêm enum: ['Credit Card', 'Bank Transfer', 'E-wallet', 'Cash']
     },
+
     paymentDate: {
       type: Date,
     },
+
     bookingDate: {
       type: Date,
       default: Date.now,
