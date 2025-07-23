@@ -51,8 +51,8 @@ exports.createAndPayTicket = async (req, res) => {
     const paymentLinkRes = await payos.createPaymentLink({
       orderCode,
       amount: totalPrice,
-      description: `VeXemPhim-${orderCode}`, // Khi khách thanh toán xong, PayOS redirect về đây kèm status=PAID&code=00 // *** CHUYỂN HƯỚNG TRỰC TIẾP ĐẾN FRONTEND CỦA BẠN (http://localhost:5173) ***
-      returnUrl: `${clientUrl}/payment-success?ticketId=${newTicket._id}&status=PAID&code=00&orderCode=${orderCode}`, // Khi khách huỷ hoặc lỗi, redirect về đây với status=CANCELLED&code=01 // *** CHUYỂN HƯỚNG TRỰC TIẾP ĐẾN FRONTEND CỦA BẠN (http://localhost:5173) ***
+      description: `VeXemPhim-${orderCode}`, 
+      returnUrl: `${clientUrl}/payment-success?ticketId=${newTicket._id}&status=PAID&code=00&orderCode=${orderCode}`, 
       cancelUrl: `${clientUrl}/payment-cancel?ticketId=${newTicket._id}&status=CANCELLED&code=01&orderCode=${orderCode}`,
     });
     console.log(
