@@ -93,7 +93,7 @@ exports.handlePaymentReturn = async (req, res) => {
       );
     }
     res.redirect(
-      `${process.env.CLIENT_URL}/payment-success?ticketId=${ticketId}&status=${status}&code=${code}&orderCode=${orderCode}`
+      `${clientUrl}/payment-success?ticketId=${ticketId}&status=${status}&code=${code}&orderCode=${orderCode}`
     );
   } catch (error) {
     console.error('❌ Lỗi khi xử lý PayOS return URL:', error);
@@ -117,7 +117,7 @@ exports.handlePaymentCancel = async (req, res) => {
     }
 
     res.redirect(
-      `${process.env.CLIENT_URL}/payment-cancel?ticketId=${ticketId || ''}&status=${
+      `${clientUrl}/payment-cancel?ticketId=${ticketId || ''}&status=${
         status || 'CANCELLED'
       }&code=${code || '01'}&orderCode=${orderCode || ''}`
     );
